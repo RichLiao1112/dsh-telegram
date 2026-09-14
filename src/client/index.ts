@@ -11,6 +11,7 @@ import type {} from './contract.ts'
 import { TelegramCard } from './TelegramCard.tsx'
 import { TELEGRAM_NS, TelegramCardController, type TelegramSettings } from './form.ts'
 import { en, zh } from './locales.ts'
+import { styleText } from './styles.ts'
 
 /** Locale namespace this card's copy lives in. */
 export const LOCALE_NS = 'telegram.settings'
@@ -24,6 +25,17 @@ export const inject = ['slots', 'locale', 'settingsScope']
  */
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { en, zh }), 'telegram: settings dictionaries')
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {}
+    const selector = 'style[data-plugin-css="@richliao1112/dsh-telegram/settings-card"]'
+    if (document.querySelector(selector) !== null) return () => {}
+    const tag = document.createElement('style')
+    tag.dataset.plugin = '@richliao1112/dsh-telegram'
+    tag.dataset.pluginCss = 'settings-card'
+    tag.textContent = styleText
+    document.head.append(tag)
+    return () => { tag.remove() }
+  }, 'telegram: settings card styles')
   const t = ctx.locale.bind(LOCALE_NS)
   const controller = new TelegramCardController(ctx.settingsScope.bind<TelegramSettings>({ namespace: TELEGRAM_NS }))
   ctx.effect(() => () => { controller.dispose() }, 'telegram: settings card state')

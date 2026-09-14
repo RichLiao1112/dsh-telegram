@@ -1,9 +1,10 @@
 /** Telegram plugin configuration card. */
 
 import { useEffect, useRef, useState } from 'react'
-import { Button, IconChevronDownOutline14, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronDownOutline14, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TelegramCardFace, TelegramCardState, TelegramField } from './form.ts'
 import type { TelegramLocaleKey } from './locales.ts'
+import { css } from './styles.ts'
 
 /** Props the settings slot provides for this card. */
 export interface TelegramCardProps extends Omit<TelegramCardFace, 'hooks'> {
@@ -23,20 +24,20 @@ function Field(props: {
   readonly onReset: () => void
 }) {
   return (
-    <div style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <label htmlFor={props.id} style={{ fontSize: 13, fontWeight: 600 }}>{props.label}</label>
+    <div className={css.field}>
+      <div className={css.fieldHead}>
+        <label className={css.label} htmlFor={props.id}>{props.label}</label>
         {props.state.overridden
           ? (
-            <>
+            <span className={css.badges}>
               <Tag tone="neutral">{props.t('overridden')}</Tag>
-              <Button variant="ghost" disabled={props.disabled} onClick={props.onReset}>{props.t('reset')}</Button>
-            </>
+              <button type="button" className={css.reset} disabled={props.disabled} onClick={props.onReset}>{props.t('reset')}</button>
+            </span>
           )
           : null}
       </div>
-      <Input id={props.id} value={props.state.text} disabled={props.disabled} onChange={event => { props.onEdit(event.target.value) }} />
-      <span style={{ fontSize: 12, opacity: 0.7 }}>{props.hint}</span>
+      <input className={css.input} id={props.id} value={props.state.text} disabled={props.disabled} onChange={event => { props.onEdit(event.target.value) }} />
+      <p className={css.hint}>{props.hint}</p>
     </div>
   )
 }
@@ -78,40 +79,33 @@ export function TelegramCard(props: TelegramCardProps) {
     />
   )
   return (
-    <li style={{ borderBottom: '1px solid var(--dsw-border, rgba(127, 127, 127, 0.22))' }}>
+    <li className={`${css.card}${open ? ` ${css.cardOpen}` : ''}`}>
       <button
         type="button"
+        className={css.header}
         aria-expanded={open}
         aria-label={`${t(open ? 'collapse' : 'expand')}: ${t('title')}`}
         onClick={() => { setOpen(!open) }}
-        style={{
-          display: 'flex', width: '100%', alignItems: 'center', gap: 10,
-          padding: '12px 0', border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left',
-        }}
       >
-        <span style={{ display: 'grid', gap: 2, flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>{t('title')}</span>
-          <span style={{ fontSize: 13, opacity: 0.72 }}>{t('description')}</span>
+        <span className={css.headText}>
+          <span className={css.name}>{t('title')}</span>
+          <span className={css.description}>{t('description')}</span>
         </span>
-        {state.dirty ? <Tag tone="neutral">{t('unsaved')}</Tag> : null}
-        <span style={{ display: 'inline-flex', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
-          <IconChevronDownOutline14 />
-        </span>
+        {state.dirty ? <Tag tone="neutral" className={css.pending}>{t('unsaved')}</Tag> : null}
+        <IconChevronDownOutline14 className={`${css.chevron}${open ? ` ${css.chevronOpen}` : ''}`} />
       </button>
       {open
         ? (
-          <div style={{ padding: '4px 0 16px' }}>
-            {!state.writable ? <p role="status" style={{ fontSize: 13, opacity: 0.72 }}>{t('readOnly')}</p> : null}
+          <div className={css.body}>
+            {!state.writable ? <p className={css.readOnly} role="status">{t('readOnly')}</p> : null}
             {field('token', 'token', 'tokenHint')}
             {field('chatId', 'chatId', 'chatIdHint')}
             {field('workspacePath', 'workspacePath', 'workspacePathHint')}
             {field('agentPreset', 'agentPreset', 'agentPresetHint')}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Button variant="ghost" disabled={!state.dirty || state.saving} onClick={props.discard}>{t('discard')}</Button>
-              <Button variant="primary" disabled={blocked} onClick={props.save}>
-                {state.saving ? t('saving') : t('save')}
-              </Button>
-              {state.failed ? <Tag tone="danger">{t('saveFailed')}</Tag> : null}
+            <div className={css.footer}>
+              {state.failed ? <p className={css.failed} role="status">{t('saveFailed')}</p> : null}
+              <button type="button" className={css.discard} disabled={!state.dirty || state.saving} onClick={props.discard}>{t('discard')}</button>
+              <button type="button" className={css.save} disabled={blocked} onClick={props.save}>{t(state.saving ? 'saving' : 'save')}</button>
             </div>
           </div>
         )
