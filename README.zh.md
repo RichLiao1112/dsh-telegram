@@ -94,6 +94,12 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 | `streamReplies` | `true` | 回复流式写入同一条消息，随后由已提交文本替换 |
 | `toolProgress` | `false` | 每个回合一条合并的工具活动消息 |
 
+## 设置页
+
+本包除 Host 插件外还提供浏览器半身。挂载 profile 行后，Web 的 **设置 → 插件 → 插件配置**
+会出现 Telegram 卡片，编辑同一个 `telegram` 命名空间，改动暂存后点保存才写入。卡片只在
+回环地址页面出现，因为 DSH 只对回环客户端开放设置持久化。
+
 ## 已知限制与延后工作
 
 - 适配器使用长轮询，待处理交互仅存在于进程内；重启会取消它们。

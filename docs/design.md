@@ -32,6 +32,13 @@ The chat also carries Telegram's own liveness signal: `turn/start` opens the typ
 - **Reimplementing the Web pickers as model prompts.** `/model` and `/rename` could have been described to the model in chat text, which would make selection nondeterministic and bypass Session validation. Registering real command definitions keeps the Web and chat write paths identical.
 - **Registering the fallbacks globally.** A global `model` or `rename` registration would collide with a deployment's own command and fail the plugin load; per-agent registration lets the host definition win.
 
+The card face lives in this repository's browser half (`src/client/`), not in the
+harness client packages: the plugin configuration section keys each card by the
+settings namespace it edits, which is the extension point a plugin distributed
+outside the harness repository uses. The browser half builds as a
+`window.__ModuleLoader__.load` closure factory over the shell's platform modules
+(`lib/client.js`), declared through `dsh.client` and the `./client` export.
+
 ## Consequences
 
 A deployment adds the plugin to its own profile patch and keeps the bot token in an environment expression or private configuration. Restarting the process cancels outstanding prompts; the plugin does not replay Bot API updates or persist a session mapping. Anything the Bot API cannot serve stays out of reach: media above the 20 MB download ceiling is refused before download, reasoning text and tool result content are not rendered, and a command result that names richer output reports the session event that owns it.
