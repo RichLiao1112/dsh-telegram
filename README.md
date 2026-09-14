@@ -7,6 +7,10 @@ kind: "package-reference"
 
 English | [中文](README.zh.md)
 
+This repository is the source of truth for the plugin. A DSH deployment consumes
+it directly: point the profile dependency at this checkout (or install from the
+Git URL) and mount the row below.
+
 ## Install
 
 The plugin runs inside a DeepSeek Harness `dsh` deployment. Add it to a profile and mount one row in that profile's `cordis.patch.yml`:

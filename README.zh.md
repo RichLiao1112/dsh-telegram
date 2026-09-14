@@ -7,6 +7,8 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
+本仓库是该插件的唯一来源。DSH 部署直接消费它：把 profile 依赖指向本 checkout（或从 Git URL 安装），并挂载下面这一行。
+
 ## 安装
 
 插件运行在 DeepSeek Harness（`dsh`）部署内。把它加入某个 profile，并在该 profile 的 `cordis.patch.yml` 中挂载一行：
