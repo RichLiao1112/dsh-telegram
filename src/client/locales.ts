@@ -8,6 +8,7 @@ export type TelegramLocaleKey =
   | 'workspacePath' | 'workspacePathHint'
   | 'agentPreset' | 'agentPresetHint'
   | 'overridden' | 'reset' | 'save' | 'discard' | 'saving' | 'saveFailed' | 'unavailable'
+  | 'expand' | 'collapse' | 'unsaved' | 'readOnly'
 
 /** English copy. */
 export const en: Record<TelegramLocaleKey, string> = {
@@ -28,6 +29,10 @@ export const en: Record<TelegramLocaleKey, string> = {
   saving: 'Saving…',
   saveFailed: 'Save failed',
   unavailable: 'Telegram settings are unavailable in this browser.',
+  expand: 'Expand',
+  collapse: 'Collapse',
+  unsaved: 'Unsaved',
+  readOnly: 'This settings document is read-only in this browser.',
 }
 
 /** Chinese copy. */
@@ -49,4 +54,8 @@ export const zh: Record<TelegramLocaleKey, string> = {
   saving: '保存中…',
   saveFailed: '保存失败',
   unavailable: '当前浏览器无法使用 Telegram 设置。',
+  expand: '展开',
+  collapse: '收起',
+  unsaved: '有未保存改动',
+  readOnly: '当前浏览器中的设置文档为只读。',
 }

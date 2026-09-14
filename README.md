@@ -98,7 +98,9 @@ Beyond `token` and `chats`, the row accepts three visibility switches:
 
 ## Settings page
 
-The package ships a browser half alongside the Host plugin. When the profile row is
+The package ships a browser half alongside the Host plugin. The card follows the
+Shell and Agent Loop disclosure pattern: it starts collapsed, keeps staged drafts
+while closed, marks unsaved edits in its header, and closes after a confirmed save. When the profile row is
 mounted, the Web **Settings → Plugins → Plugin configuration** page gains a Telegram
 card that edits the same `telegram` namespace, staged behind Save. The card only
 appears on a loopback page, because DSH exposes settings persistence to loopback

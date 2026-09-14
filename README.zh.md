@@ -96,7 +96,8 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 
 ## 设置页
 
-本包除 Host 插件外还提供浏览器半身。挂载 profile 行后，Web 的 **设置 → 插件 → 插件配置**
+本包除 Host 插件外还提供浏览器半身。卡片遵循 Shell 与 Agent Loop 的展开约定：
+默认收起，收起时保留暂存改动，标题标记未保存状态，保存确认后自动收起。挂载 profile 行后，Web 的 **设置 → 插件 → 插件配置**
 会出现 Telegram 卡片，编辑同一个 `telegram` 命名空间，改动暂存后点保存才写入。卡片只在
 回环地址页面出现，因为 DSH 只对回环客户端开放设置持久化。
 

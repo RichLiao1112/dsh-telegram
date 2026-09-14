@@ -1,6 +1,7 @@
 /** Telegram plugin configuration card. */
 
-import { Button, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useEffect, useRef, useState } from 'react'
+import { Button, IconChevronDownOutline14, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TelegramCardFace, TelegramCardState, TelegramField } from './form.ts'
 import type { TelegramLocaleKey } from './locales.ts'
 
@@ -41,15 +42,29 @@ function Field(props: {
 }
 
 /**
- * Render settings stored by the Telegram Host plugin.
+ * Render settings stored by the Telegram Host plugin. The header follows the
+ * same disclosure contract as Shell and Agent Loop: cards start collapsed,
+ * unsaved drafts survive collapsing, and a confirmed save closes the card.
  * @param props - card copy, staged state, and its edit actions.
  * @returns the settings card.
  */
 export function TelegramCard(props: TelegramCardProps) {
   const state = props.useTelegramCard(snapshot => snapshot)
+  const [open, setOpen] = useState(false)
+  const saveStarted = useRef(false)
   const { t } = props
+  useEffect(() => {
+    if (state.saving) {
+      saveStarted.current = true
+      return
+    }
+    if (!saveStarted.current) return
+    saveStarted.current = false
+    if (!state.dirty && !state.failed) setOpen(false)
+  }, [state.dirty, state.failed, state.saving])
+  if (!state.available) return null
   const disabled = !state.writable
-  if (!state.available) return <p style={{ fontSize: 13, opacity: 0.7 }}>{t('unavailable')}</p>
+  const blocked = disabled || !state.dirty || state.saving
   const field = (key: TelegramField, label: TelegramLocaleKey, hint: TelegramLocaleKey) => (
     <Field
       id={`plugin-config-telegram-${key}`}
@@ -63,20 +78,44 @@ export function TelegramCard(props: TelegramCardProps) {
     />
   )
   return (
-    <section style={{ padding: '12px 0' }}>
-      <h3 style={{ margin: '0 0 4px', fontSize: 15 }}>{t('title')}</h3>
-      <p style={{ margin: '0 0 12px', fontSize: 13, opacity: 0.75 }}>{t('description')}</p>
-      {field('token', 'token', 'tokenHint')}
-      {field('chatId', 'chatId', 'chatIdHint')}
-      {field('workspacePath', 'workspacePath', 'workspacePathHint')}
-      {field('agentPreset', 'agentPreset', 'agentPresetHint')}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button variant="primary" disabled={disabled || !state.dirty || state.saving} onClick={props.save}>
-          {state.saving ? t('saving') : t('save')}
-        </Button>
-        <Button variant="ghost" disabled={!state.dirty || state.saving} onClick={props.discard}>{t('discard')}</Button>
-        {state.failed ? <Tag tone="danger">{t('saveFailed')}</Tag> : null}
-      </div>
-    </section>
+    <li style={{ borderBottom: '1px solid var(--dsw-border, rgba(127, 127, 127, 0.22))' }}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`${t(open ? 'collapse' : 'expand')}: ${t('title')}`}
+        onClick={() => { setOpen(!open) }}
+        style={{
+          display: 'flex', width: '100%', alignItems: 'center', gap: 10,
+          padding: '12px 0', border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ display: 'grid', gap: 2, flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{t('title')}</span>
+          <span style={{ fontSize: 13, opacity: 0.72 }}>{t('description')}</span>
+        </span>
+        {state.dirty ? <Tag tone="neutral">{t('unsaved')}</Tag> : null}
+        <span style={{ display: 'inline-flex', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
+          <IconChevronDownOutline14 />
+        </span>
+      </button>
+      {open
+        ? (
+          <div style={{ padding: '4px 0 16px' }}>
+            {!state.writable ? <p role="status" style={{ fontSize: 13, opacity: 0.72 }}>{t('readOnly')}</p> : null}
+            {field('token', 'token', 'tokenHint')}
+            {field('chatId', 'chatId', 'chatIdHint')}
+            {field('workspacePath', 'workspacePath', 'workspacePathHint')}
+            {field('agentPreset', 'agentPreset', 'agentPresetHint')}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button variant="ghost" disabled={!state.dirty || state.saving} onClick={props.discard}>{t('discard')}</Button>
+              <Button variant="primary" disabled={blocked} onClick={props.save}>
+                {state.saving ? t('saving') : t('save')}
+              </Button>
+              {state.failed ? <Tag tone="danger">{t('saveFailed')}</Tag> : null}
+            </div>
+          </div>
+        )
+        : null}
+    </li>
   )
 }
