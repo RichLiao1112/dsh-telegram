@@ -3,7 +3,7 @@ description: "Telegram Bot API adapter for configured live DSH agents."
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-telegram
+# @richliao1112/dsh-telegram
 
 English | [中文](README.zh.md)
 
@@ -19,7 +19,7 @@ pnpm add github:RichLiao1112/dsh-telegram
 ```yaml
 - insert:
     - id: telegram
-      name: '@deepseek-ai/dsh-telegram'
+      name: '@richliao1112/dsh-telegram'
       config:
         token: !!js process.env.DSH_TELEGRAM_BOT_TOKEN
         chats:
@@ -52,7 +52,7 @@ Install the package in a profile, then add this row to its `cordis.patch.yml`. K
 ```yaml
 - insert:
     - id: telegram
-      name: '@deepseek-ai/dsh-telegram'
+      name: '@richliao1112/dsh-telegram'
       config:
         token: !!js process.env.DSH_TELEGRAM_BOT_TOKEN
         chats:
@@ -81,6 +81,16 @@ Without `agentId`, the first ordinary chat message creates and selects a root ag
 - Assistant text is forwarded after its durable `assistant/message` commit. While a turn runs, the reply streams into one message that the committed text then replaces, and each tool call appears as its own line that its result edits in place.
 - Approval prompts have **Allow once** and **Reject** buttons. Telegram delivery failure or cancellation fails closed.
 - `ask_user_question` asks every question in order and settles all answers together. Options become buttons — including the plan-mode review — a `multiSelect` question toggles options until **Done**, and without options the next text reply becomes the custom answer. `/answer <text>` answers a pending question with text that itself starts with a slash.
+
+## Configuration
+
+Beyond `token` and `chats`, the row accepts three visibility switches:
+
+| field | default | effect |
+|---|---|---|
+| `typingIndicator` | `true` | Telegram's typing state from `turn/start` to `turn/end` |
+| `streamReplies` | `true` | the reply streams into one message the committed text then replaces |
+| `toolProgress` | `false` | one merged tool-activity message per turn |
 
 ## Known Limitations and Deferred Work
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-telegram",
+  "name": "@richliao1112/dsh-telegram",
   "version": "0.1.5-rc.1",
   "description": "Telegram Bot API adapter for live DeepSeek Harness agents: chat, slash commands, attachments, approvals, model picker and session switching",
   "license": "MIT",

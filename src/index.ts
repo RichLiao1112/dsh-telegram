@@ -1,6 +1,6 @@
 /**
  * Telegram Bot API adapter for one or more configured live DSH agents.
- * @module @deepseek-ai/dsh-telegram
+ * @module @richliao1112/dsh-telegram
  */
 
 import { randomUUID } from 'node:crypto'
@@ -71,7 +71,11 @@ export interface Config {
   readonly pollTimeoutSeconds: number
   /** Maximum characters sent in each Telegram message. */
   readonly maxMessageChars: number
-  /** Whether tool calls appear as their own progress lines while a turn runs. */
+  /**
+   * Whether tool calls are published to the chat. Off by default: the chat
+   * carries the typing indicator, the streamed reply, and the merged tool
+   * message only when a deployment asks for it.
+   */
   readonly toolProgress: boolean
   /** Whether the reply is streamed into one edited message as it is produced. */
   readonly streamReplies: boolean
@@ -301,7 +305,7 @@ export class TelegramService extends Service {
     })).min(1),
     pollTimeoutSeconds: z.number().step(1).min(1).max(50).default(25),
     maxMessageChars: z.number().step(1).min(128).max(4096).default(4000),
-    toolProgress: z.boolean().default(true),
+    toolProgress: z.boolean().default(false),
     streamReplies: z.boolean().default(true),
     streamEditIntervalSeconds: z.number().min(0.5).max(30).default(2),
     typingIndicator: z.boolean().default(true),

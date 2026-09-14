@@ -3,7 +3,7 @@ description: "为已配置的存活 DSH agent 提供 Telegram Bot API 适配。"
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-telegram
+# @richliao1112/dsh-telegram
 
 [English](README.md) | 中文
 
@@ -19,7 +19,7 @@ pnpm add github:RichLiao1112/dsh-telegram
 ```yaml
 - insert:
     - id: telegram
-      name: '@deepseek-ai/dsh-telegram'
+      name: '@richliao1112/dsh-telegram'
       config:
         token: !!js process.env.DSH_TELEGRAM_BOT_TOKEN
         chats:
@@ -52,7 +52,7 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 ```yaml
 - insert:
     - id: telegram
-      name: '@deepseek-ai/dsh-telegram'
+      name: '@richliao1112/dsh-telegram'
       config:
         token: !!js process.env.DSH_TELEGRAM_BOT_TOKEN
         chats:
@@ -81,6 +81,16 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 - assistant 文本在持久化 `assistant/message` 后转发。回合进行中，回复会流式写入同一条消息，随后由已提交文本替换；每次工具调用显示为独立一行，并在结果到达时就地改写。
 - 审批提示提供 **Allow once** 与 **Reject** 按钮；发送失败或取消会拒绝请求。
 - `ask_user_question` 按顺序询问每个问题，并一次性提交全部回答。选项显示为按钮（包括 plan 模式审查）；`multiSelect` 问题通过切换选项直到 **Done**；无选项时下一条文本是自定义答案。`/answer <text>` 可用以斜杠开头的文本回答待处理问题。
+
+## 配置
+
+除 `token` 与 `chats` 外，该行还接受三个可见性开关：
+
+| 字段 | 默认 | 作用 |
+|---|---|---|
+| `typingIndicator` | `true` | 从 `turn/start` 到 `turn/end` 显示 Telegram“正在输入” |
+| `streamReplies` | `true` | 回复流式写入同一条消息，随后由已提交文本替换 |
+| `toolProgress` | `false` | 每个回合一条合并的工具活动消息 |
 
 ## 已知限制与延后工作
 
