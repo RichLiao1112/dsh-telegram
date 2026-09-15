@@ -4,6 +4,9 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { openAsBlob } from 'node:fs'
+import { lstat, stat } from 'node:fs/promises'
+import { basename, extname, resolve as resolvePath } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { Agent, ModelSelection } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-default-model'
@@ -201,6 +204,38 @@ const TYPING_REFRESH_MS = 4_000
 /** Ceiling on one typing indicator, so a stuck turn cannot type forever. */
 const TYPING_MAX_MS = 10 * 60_000
 
+/** Telegram Bot API cloud upload ceiling for one outbound file. */
+const TELEGRAM_UPLOAD_MAX_BYTES = 50_000_000
+/** Leave room below the Bot API ceiling for reliable multipart uploads. */
+const TELEGRAM_UPLOAD_PART_BYTES = 49_000_000
+
+interface PresentedFile {
+  readonly path: string
+  readonly description?: string
+}
+
+/**
+ * Resolve a present-tool path in the owning Session workspace.
+ * @param cwd - Session workspace, when the session has one.
+ * @param path - validated path recorded by the present event.
+ * @returns the host path used by the local Bot API adapter.
+ */
+function presentedHostPath(cwd: string | undefined, path: string): string {
+  return resolvePath(cwd ?? process.cwd(), path)
+}
+
+/** Return a conservative MIME type for Telegram's media method selection. */
+function mimeTypeFor(filename: string): string {
+  const extension = extname(filename).toLowerCase()
+  if (extension === '.mp4' || extension === '.m4v') return 'video/mp4'
+  if (extension === '.webm') return 'video/webm'
+  if (extension === '.mov') return 'video/quicktime'
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg'
+  if (extension === '.png') return 'image/png'
+  if (extension === '.gif') return 'image/gif'
+  return 'application/octet-stream'
+}
+
 /**
  * Wait for a delay, resolving early when the caller's signal aborts.
  * @param ms - milliseconds to wait.
@@ -340,6 +375,8 @@ export class TelegramService extends Service {
   private readonly cardMessages = new Map<string, number>()
   /** Running typing indicator per chat. */
   private readonly typing = new Map<string, TypingEntry>()
+  /** Serialized outbound present-file deliveries per chat. */
+  private readonly presentedQueues = new Map<string, Promise<void>>()
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'telegram')
@@ -392,6 +429,11 @@ export class TelegramService extends Service {
         if (event.type === 'tool/result') {
           const result = event.data.message.content[0]
           this.reportToolResult(chatId, String(result.toolCallId), result.isError === true)
+          return
+        }
+        if ((event as { readonly type: string }).type === 'deliverables/presented') {
+          const delivery = event as unknown as { readonly data: { readonly files: readonly PresentedFile[] } }
+          this.queuePresentedFiles(chatId, session, delivery.data.files)
           return
         }
         if (event.type !== 'assistant/message') return
@@ -1259,6 +1301,87 @@ export class TelegramService extends Service {
       return
     }
     await this.sendText(chatId, text, undefined, markdown)
+  }
+
+  /** Queue present-tool files so one chat receives them in declaration order. */
+  private queuePresentedFiles(
+    chatId: string,
+    session: { readonly header: { readonly cwd?: string } },
+    files: readonly PresentedFile[],
+  ): void {
+    const previous = this.presentedQueues.get(chatId) ?? Promise.resolve()
+    const next = previous.catch(() => undefined).then(async () => {
+      for (const file of files) {
+        try {
+          await this.deliverPresentedFile(chatId, session.header.cwd, file)
+        } catch (error: unknown) {
+          this.ctx.logger.warn('telegram: present-file delivery failed', error)
+          await this.sendText(chatId, `File delivery failed: ${basename(file.path) || 'unnamed file'}`).catch(() => undefined)
+        }
+      }
+    })
+    this.presentedQueues.set(chatId, next)
+    void next.finally(() => {
+      if (this.presentedQueues.get(chatId) === next) this.presentedQueues.delete(chatId)
+    })
+  }
+
+  /** Send one Web-presented file, splitting files above Telegram's cloud limit. */
+  private async deliverPresentedFile(chatId: string, cwd: string | undefined, file: PresentedFile): Promise<void> {
+    const filename = basename(file.path) || 'telegram-file'
+    const path = presentedHostPath(cwd, file.path)
+    const entry = await lstat(path)
+    if (!entry.isFile()) throw new Error('presented path is not a regular file')
+    const info = await stat(path)
+    const size = info.size
+    const mimeType = mimeTypeFor(filename)
+    const blob = await openAsBlob(path, { type: mimeType })
+    const caption = file.description?.trim() === '' ? undefined : file.description?.trim()
+    if (size <= TELEGRAM_UPLOAD_MAX_BYTES) {
+      if (mimeType.startsWith('video/')) {
+        await this.sendVideo(chatId, filename, blob, caption)
+      } else {
+        await this.sendDocumentBlob(chatId, filename, blob, caption)
+      }
+      return
+    }
+    const total = Math.ceil(size / TELEGRAM_UPLOAD_PART_BYTES)
+    await this.sendText(chatId, `文件 ${filename} 为 ${(size / 1_000_000).toFixed(1)} MB，超过 Telegram 单文件限制，拆分为 ${total} 个分片发送。`)
+    for (let index = 0; index < total; index += 1) {
+      const start = index * TELEGRAM_UPLOAD_PART_BYTES
+      const partName = `${filename}.part-${String(index + 1).padStart(2, '0')}-of-${String(total).padStart(2, '0')}`
+      await this.sendDocumentBlob(
+        chatId,
+        partName,
+        blob.slice(start, Math.min(start + TELEGRAM_UPLOAD_PART_BYTES, size), 'application/octet-stream'),
+        `分片 ${index + 1}/${total} · ${filename}`,
+      )
+    }
+  }
+
+  /** Send one file blob as a Telegram document. */
+  private async sendDocumentBlob(chatId: string, filename: string, blob: Blob, caption?: string): Promise<void> {
+    const form = new FormData()
+    form.set('chat_id', chatId)
+    if (caption !== undefined) form.set('caption', caption.slice(0, 1024))
+    form.set('document', blob, filename)
+    const response = await fetch(`https://api.telegram.org/bot${this.config.token}/sendDocument`, {
+      method: 'POST', body: form,
+    })
+    resultOf(await response.json())
+  }
+
+  /** Send a small video through Telegram's native video message type. */
+  private async sendVideo(chatId: string, filename: string, blob: Blob, caption?: string): Promise<void> {
+    const form = new FormData()
+    form.set('chat_id', chatId)
+    if (caption !== undefined) form.set('caption', caption.slice(0, 1024))
+    form.set('supports_streaming', 'true')
+    form.set('video', blob, filename)
+    const response = await fetch(`https://api.telegram.org/bot${this.config.token}/sendVideo`, {
+      method: 'POST', body: form,
+    })
+    resultOf(await response.json())
   }
 
   /** Download one Bot API file through the token-scoped file route. */

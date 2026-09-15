@@ -1,5 +1,7 @@
 /** Telegram chat command dispatch: registry execution, titles, fallback /model, /export delivery. */
 
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { CommandDefinition } from '@deepseek-ai/dsh-commands'
@@ -538,7 +540,7 @@ describe('Telegram questionnaires', () => {
 })
 
 describe('Telegram live progress', () => {
-  const session = { id: SESSION_ID } as never
+  const session = { id: SESSION_ID, header: { cwd: undefined } } as never
 
   it('merges every tool call of a turn into one message that settles in place', async () => {
     const test = await boot()
@@ -581,6 +583,35 @@ describe('Telegram live progress', () => {
     await test.waitFor(() => test.edits.length === 1)
     expect(test.edits[0]?.text).toBe('Hello there')
     expect(test.texts()).toEqual(['Hel'])
+  })
+
+  it('delivers a Web-presented small video through Telegram', async () => {
+    const test = await boot()
+    const root = await mkdtemp('/tmp/dsh-telegram-present-')
+    await writeFile(join(root, 'clip.mp4'), Buffer.from('video'))
+    try {
+      test.emit('session/event', { id: SESSION_ID, header: { cwd: root } } as never, {
+        type: 'deliverables/presented', data: { files: [{ path: 'clip.mp4', description: 'Downloaded clip' }] },
+      })
+      await test.waitFor(() => test.requests.includes('sendVideo'))
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it('splits a Web-presented file above Telegram’s upload ceiling', async () => {
+    const test = await boot()
+    const root = await mkdtemp('/tmp/dsh-telegram-present-large-')
+    await writeFile(join(root, 'large.bin'), Buffer.alloc(50_000_001))
+    try {
+      test.emit('session/event', { id: SESSION_ID, header: { cwd: root } } as never, {
+        type: 'deliverables/presented', data: { files: [{ path: 'large.bin' }] },
+      })
+      await test.waitFor(() => test.requests.filter(method => method === 'sendDocument').length === 2)
+      expect(test.texts().some(text => text.includes('拆分为 2 个分片'))).toBe(true)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })
 

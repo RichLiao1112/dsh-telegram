@@ -76,6 +76,7 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 - 每个不需要附件输入的已注册斜杠命令都通过 Host 命令注册表执行，因此 `/compact`、`/goal`、`/plan`、`/permission`、`/feedback` 和 `/export` 的行为与 Web 输入框一致。
 - `/model` 打开卡片，按 provider → 模型 → 推理强度逐步点选，并通过 Web 选择器使用的同一套已校验会话操作应用选择；手写形式 `/model <provider> <model> [reasoning-effort]` 继续可用，Host 已注册的 `model` 命令优先于回退实现。`/rename <title>` 通过 Web 标题编辑器使用的同一操作固定会话标题。
 - `/export` 将生成的 ZIP 归档作为文档发送到聊天，上限为 Telegram 的 50 MB 上传限制，而不只是报告下载意图。
+- Web 中通过 `present` 交付的文件也会自动发送到 Telegram；50 MB 以内的视频按视频发送，超过上限的文件会拆成 49 MB 分片并逐个发送。
 - 接受照片、文档、音频、视频、语音和贴纸。消息中的媒体会成为下一轮的图像或文件内容；以斜杠开头的说明文字则改为携带这些媒体运行该命令，而未声明附件输入的命令会拒绝它。
 - 模型输出的 Markdown 会转换为 Telegram 支持的 HTML 子集（粗体、斜体、删除线、链接、行内与围栏代码、标题、列表、引用）；解析被拒绝时回退为纯文本，围栏代码块不会被跨消息切断。
 - 每个回合只有一条消息汇总工具活动，按各工具自己的 `presentCall` 意图显示为 `Bash · <描述>` / `Read · <路径>`，并就地结算；交互式的 `ask_user_question` 不进入该消息，因为它自己的提示就是界面。重启会恢复该聊天已持久化的会话而不是新建；只有 `/new` 才会另开会话。
@@ -107,4 +108,4 @@ pnpm build       # tsc 产出 lib/types，tsdown 打包 lib/index.js
 - 所选会话仅保留在进程内。重启会丢失选择；除非 `agentId` 指向存活会话，否则下一条普通消息会创建新会话。
 - Bot API 下载上限为 20 MB，更大的媒体会在开始下载前被拒绝。推理文本和工具结果内容不渲染；只有 assistant 消息文本会流式显示。
 - `toolProgress`、`streamReplies` 与 `typingIndicator` 以消息量为代价换取可见性，可按部署关闭。
-- 标识了更丰富输出的命令结果会报告拥有该输出的会话事件；Telegram 不渲染该输出。
+- 标识了更丰富输出的命令结果会报告拥有该输出的会话事件；除 `present` 文件交付外，Telegram 不渲染其它丰富输出。超过 50 MB 的文件会拆分发送。
